@@ -1,0 +1,2 @@
+# No third-party dependencies required.
+# The backend uses Python's built-in http.server, json, and pathlib modules.
