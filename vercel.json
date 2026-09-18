@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "python build.py",
+  "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api" }
+  ]
+}

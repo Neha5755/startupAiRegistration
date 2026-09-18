@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+public/
+backend/data/registration.json
+.vercel/

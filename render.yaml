@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: startupready-ai
+    runtime: python
+    region: singapore
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python backend/server.py
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
