@@ -1,82 +1,66 @@
-const steps = [
-  ['Welcome', 'A quick tour'], ['Account', 'Create your login'], ['Founder profile', 'Tell us about you'], ['Startup basics', 'Your venture'],
-  ['Category', 'Industry & stage'], ['Company', 'Legal details'], ['Location', 'Where you work'], ['Team', 'Your people'],
-  ['Snapshot', 'The big picture'], ['Documents', 'Optional uploads'], ['Review', 'Check your details'], ['Complete', 'You are ready']
-];
+const products = [
+  ["Little Love Box", "₹199", "A purple box full of sweet little feelings.", "little-love-box.png"],
+  ["Punny Love Cards", "₹179", "A cute card set for your favourite person.", "punny-love-cards.png"],
+  ["Bloom Choco Notes", "₹199", "Floral notes with a chocolatey surprise.", "bloom-choco-notes.jpg"],
+  ["Birthday Choco Board", "₹199", "A big, happy birthday in chocolates.", "birthday-choco-board.jpg"],
+  ["Sweet Mini Cards", "₹159", "Tiny cards, tiny treats, huge smiles.", "sweet-mini-cards.jpg"],
+  ["Earring Bouquet", "₹169", "A pretty little bouquet for a special pair.", "earring-bouquet.jpg"],
+  ["Memory Love Bouquet", "₹399", "Photos, roses, and memories wrapped together.", "memory-love-bouquet.jpg"],
+  ["Money Bloom Bouquet", "₹399–₹699", "A show-stopping bouquet made for celebrations.", "money-bloom-bouquet.png"],
+  ["KitKat Ribbon Bar", "₹199", "Five sweet breaks, tied with a bow.", "kitkat-ribbon-bar.png"],
+  ["Silk Surprise Bouquet", "₹219", "A purple silk-chocolate bouquet.", "silk-surprise-bouquet.jpg"],
+  ["Midnight Silk Bouquet", "₹279", "Black, red, and silk chocolate magic.", "midnight-silk-bouquet.jpg"],
+  ["Lavender Rose Pop", "₹99", "A tiny lavender rose with big charm.", "lavender-rose-pop.jpg"],
+  ["Pink Rose Pop", "₹99", "A little pink rose, ready to gift.", "pink-rose-pop.jpg"],
+].map(([name, price, caption, image]) => ({ name, price, caption, image: `assets/${image}` }));
 
-let current = 0;
-let state = { account:{}, founder:{ skills:[] }, startup:{}, category:{}, company:{}, location:{}, team:{ founders:[{}] }, snapshot:{}, documents:[] };
-let saveTimer;
+const grid = document.querySelector("#product-grid");
+const dialog = document.querySelector("#order-dialog");
+const form = document.querySelector("#order-form");
+const chosenProduct = document.querySelector("#chosen-product");
+const productInput = document.querySelector("#product-input");
+const status = document.querySelector("#form-status");
 
-const $ = selector => document.querySelector(selector);
-const stage = $('#form-stage');
-const nav = $('#form-nav');
-const values = (object, key) => object?.[key] ?? '';
-
-const fields = (section, items) => `<div class="form-grid">${items.map(({key,label,type='text',required=false,options=[],full=false,help='',placeholder=''}) => `
-  <div class="field ${full ? 'full' : ''}" data-field="${section}.${key}">
-    <label for="${section}-${key}">${label}${required ? '<span>*</span>' : ''}</label>
-    ${type === 'textarea' ? `<textarea id="${section}-${key}" data-section="${section}" data-key="${key}" placeholder="${placeholder}">${values(state[section],key)}</textarea>` : type === 'select' ? `<select id="${section}-${key}" data-section="${section}" data-key="${key}"><option value="">Select an option</option>${options.map(o => `<option ${values(state[section],key) === o ? 'selected' : ''}>${o}</option>`).join('')}</select>` : `<input id="${section}-${key}" data-section="${section}" data-key="${key}" type="${type}" value="${values(state[section],key)}" placeholder="${placeholder}" />`}
-    ${help ? `<small class="help">${help}</small>` : ''}<small class="field-error"></small>
-  </div>`).join('')}</div>`;
-
-function heading(kicker, title, intro) { return `<p class="page-kicker">${kicker}</p><h2>${title}</h2><p class="intro">${intro}</p>`; }
-function stageChoices() { const options = ['Idea','Prototype','MVP','Pilot','Revenue','Growth','Scaling']; return `<div class="field full"><label>Startup stage <span>*</span></label><div class="choice-grid">${options.map(o => `<button class="choice ${state.category.stage===o?'selected':''}" data-choice="category.stage" data-value="${o}">${o}</button>`).join('')}</div><small class="field-error"></small></div>`; }
-function tags() { const options=['AI','FinTech','Blockchain','SaaS','HealthTech','Marketing','Sales','Product','Finance']; return `<div class="field full"><label>Skills</label><div class="tag-list">${options.map(o=>`<button class="tag ${state.founder.skills.includes(o)?'selected':''}" data-tag="${o}">${o}</button>`).join('')}</div></div>`; }
-function uploadBox(label='Upload your logo or drop it here') { return `<label class="upload-zone"><input class="file-input" type="file" accept=".png,.jpg,.jpeg,.pdf"/><div class="upload-icon">↥</div><strong>${label}</strong><span>PNG, JPG or PDF, up to 10MB</span></label>`; }
-
-function page() {
-  const screens = [
-    () => `<div class="welcome-hero">${heading('Welcome to StartupReady AI','Let’s build something <em>remarkable.</em>','Create your startup profile and receive a tailored readiness report — in about five minutes.')}<div class="orb">S</div><div class="benefit-list"><div class="benefit"><b>✓</b> Takes only 5 minutes</div><div class="benefit"><b>✓</b> Save & continue anytime</div><div class="benefit"><b>✓</b> AI helps shape your profile</div><div class="benefit"><b>✓</b> Free readiness report</div></div></div>`,
-    () => heading('Step 2 · Founder account','First, let’s create your account.','Use a work email you check regularly. We’ll keep you posted as your profile takes shape.') + fields('account',[{key:'fullName',label:'Full name',required:true,placeholder:'e.g. Aisha Sharma'},{key:'workEmail',label:'Work email',type:'email',required:true,placeholder:'aisha@company.com'},{key:'mobile',label:'Mobile number',type:'tel',required:true,placeholder:'+91 00000 00000'},{key:'password',label:'Password',type:'password',required:true,placeholder:'At least 8 characters'},{key:'confirmPassword',label:'Confirm password',type:'password',required:true,placeholder:'Re-enter password'}]),
-    () => heading('Step 3 · Founder profile','Tell us a little about <em>you.</em>','Your experience helps us personalize the guidance you receive.') + fields('founder',[{key:'designation',label:'Designation',type:'select',options:['Founder','Co-founder','CEO','CTO','COO','Other']},{key:'linkedin',label:'LinkedIn profile',placeholder:'linkedin.com/in/yourname'},{key:'experience',label:'Years of experience',type:'select',options:['0–2 years','3–5 years','6–10 years','10+ years']},{key:'qualification',label:'Highest qualification',type:'select',options:['High school','Bachelor’s','Master’s','MBA','PhD','Other']},{key:'startupExperience',label:'Previous startup experience',type:'select',options:['Yes','No']},{key:'bio',label:'Short bio',type:'textarea',full:true,placeholder:'Tell us about your background, strengths and aspirations.'}]) + tags(),
-    () => heading('Step 4 · Startup basics','Now, about your <em>venture.</em>','Just the essentials for now. You can enrich this profile later.') + fields('startup',[{key:'name',label:'Startup name',required:true,placeholder:'Your venture name'},{key:'tagline',label:'Tagline',placeholder:'A short description of what you do'},{key:'website',label:'Website',type:'url',placeholder:'https://yourstartup.com'},{key:'email',label:'Startup email',type:'email',placeholder:'hello@yourstartup.com'},{key:'mobile',label:'Startup mobile',type:'tel',placeholder:'+91 00000 00000'}]) + `<div class="field full"><label>Startup logo</label>${uploadBox()}</div>`,
-    () => heading('Step 5 · Category','Where does your startup <em>belong?</em>','This lets us match your journey with the right insights and opportunities.') + fields('category',[{key:'industry',label:'Choose your industry',type:'select',required:true,options:['FinTech','HealthTech','EdTech','AgriTech','AI','Blockchain','Cyber Security','Retail','Manufacturing','Logistics','Mobility','Energy','Climate Tech','DeepTech','SaaS','IoT','Web3','Others']}]) + stageChoices(),
-    () => heading('Step 6 · Company information','A little about the <em>legal setup.</em>','If you have not incorporated yet, simply select “Not incorporated”.') + fields('company',[{key:'type',label:'Company type',type:'select',options:['Private Limited','LLP','Partnership','Sole Proprietorship','One Person Company','Other']},{key:'status',label:'Incorporation status',type:'select',options:['Not incorporated','Incorporated']},{key:'date',label:'Incorporation date',type:'date'},{key:'cin',label:'CIN',placeholder:'Corporate identification number'},{key:'gst',label:'GST number'},{key:'startupIndia',label:'Startup India recognition',type:'select',options:['Yes','No']},{key:'dpiit',label:'DPIIT number',full:true,placeholder:'If available'}]),
-    () => heading('Step 7 · Location','Where is your startup <em>based?</em>','This helps us surface the right regional ecosystem and support.') + fields('location',[{key:'country',label:'Country',type:'select',required:true,options:['India','United States','United Kingdom','Singapore','Other']},{key:'state',label:'State / region',placeholder:'e.g. Karnataka'},{key:'city',label:'City',placeholder:'e.g. Bengaluru'},{key:'pin',label:'PIN code',placeholder:'560001'},{key:'address',label:'Office address',type:'textarea',full:true,placeholder:'Building, street, locality'}]),
-    () => heading('Step 8 · Team','Who is building this <em>with you?</em>','Add your co-founders. You can update team details from your dashboard anytime.') + `<div id="founders">${state.team.founders.map((f,i)=>founderForm(f,i)).join('')}</div><button class="add-button" id="add-founder">+ Add co-founder</button>`,
-    () => heading('Step 9 · Startup snapshot','Help us understand the <em>big picture.</em>','These short answers unlock more useful recommendations. AI can suggest a starting point.') + fields('snapshot',[{key:'problem',label:'What problem are you solving?',type:'textarea',full:true,placeholder:'Describe the real-world problem and why it matters.'},{key:'customers',label:'Who are your customers?',type:'textarea',full:true,placeholder:'Describe your primary customer or user.'},{key:'unique',label:'What makes your startup unique?',type:'textarea',full:true,placeholder:'What is different about your approach?'},{key:'revenue',label:'Current revenue',type:'select',options:['Pre revenue','Less than ₹10L','₹10L–₹50L','₹50L–₹1Cr','₹1Cr+']},{key:'teamSize',label:'Team size',type:'select',options:['1–2','3–5','6–10','11–25','26–50','51+']},{key:'funding',label:'Funding raised',type:'select',options:['Bootstrapped','Friends & Family','Angel','Seed','Series A','Series B+']}]),
-    () => heading('Step 10 · Documents','Bring your profile to <em>life.</em>','Uploads are optional today. We can automatically extract useful information from them.') + `${uploadBox('Choose documents or drop them here')}<div class="upload-list">${['Pitch Deck','Company Profile','Business Plan','Financial Model','Founder Resume','Product Brochure','Demo Video'].map(d=>`<label class="document-card"><input type="checkbox" data-document="${d}" ${state.documents.includes(d)?'checked':''}>${d}</label>`).join('')}</div>`,
-    () => heading('Step 11 · Review','You’re almost <em>there.</em>','Review your details before creating your StartupReady profile.') + review(),
-    () => `<div class="complete-card">${heading('All set','Congratulations, <em>founders!</em>','Your startup profile has been created successfully. Your personalized readiness journey starts now.')}<div class="score-ring">Soon</div><p class="intro">Your Startup Readiness Score will be generated after the assessment.</p><div class="recommendations"><div class="recommendation">Complete startup assessment <span>15 minutes</span></div><div class="recommendation">Upload pitch deck <span>2 minutes</span></div><div class="recommendation">Book a mentor session <span>30 minutes</span></div><div class="recommendation">Explore funding opportunities <span>Tailored for you</span></div></div></div>`
-  ];
-  return screens[current]();
+function renderProducts() {
+  grid.innerHTML = products.map((product, index) => `
+    <article class="product-card">
+      <img class="product-image" src="${product.image}" alt="${product.name}" loading="lazy" />
+      <div class="product-info">
+        <div class="product-name-row"><h3 class="product-name">${product.name}</h3><strong class="product-price">${product.price}</strong></div>
+        <p class="product-caption">${product.caption}</p>
+        <button class="customize-button" data-product="${index}">Customise & order</button>
+      </div>
+    </article>`).join("");
 }
 
-function founderForm(f,index) { return `<div class="founder-card"><div class="founder-head"><span>${index === 0 ? 'Primary founder' : `Co-founder ${index}`}</span>${index ? '<button class="remove-founder" data-remove-founder="'+index+'">Remove</button>' : ''}</div><div class="form-grid">${['Name','Role','Email','Mobile','Equity %','LinkedIn','Experience'].map(key=>{let k=key.toLowerCase().replace(/[^a-z]/g,'');return `<div class="field"><label>${key}</label><input data-founder="${index}" data-founder-key="${k}" value="${f[k]||''}" placeholder="${key === 'Name' ? 'Full name' : key}" /></div>`}).join('')}</div></div>`; }
-function review() { const cards = [['Founder', state.account.fullName || 'Not added', state.founder.designation || 'Profile details'],['Startup',state.startup.name || 'Not added',state.startup.tagline || 'Startup details'],['Industry',state.category.industry || 'Not added',state.category.stage || 'Stage not selected'],['Team',`${state.team.founders.filter(f=>f.name).length || 1} founder${state.team.founders.filter(f=>f.name).length === 1 ? '' : 's'}`,'Team details'],['Location',state.location.city || 'Not added',state.location.country || ''],['Documents',`${state.documents.length} selected`,'Optional uploads']]; return `<div class="review-grid">${cards.map((c,i)=>`<article class="review-card"><div class="review-card-top"><h3>${c[0]}</h3><button data-edit-step="${[2,3,4,7,6,9][i]}">Edit</button></div><p>${c[1]}</p><p>${c[2]}</p></article>`).join('')}</div>`; }
+grid.addEventListener("click", event => {
+  const button = event.target.closest("[data-product]");
+  if (!button) return;
+  const product = products[Number(button.dataset.product)];
+  form.reset();
+  productInput.value = product.name;
+  chosenProduct.innerHTML = `<span>${product.name}</span><strong>${product.price}</strong>`;
+  status.textContent = "";
+  dialog.showModal();
+});
 
-function render() {
-  stage.innerHTML = page();
-  $('#step-meta').textContent = current === 0 ? 'Getting started' : `Step ${current + 1} of 12`;
-  const pct = Math.round((current / 11) * 100); $('#percent').textContent = `${pct}%`; $('#progress-bar').style.width = `${pct}%`;
-  $('#steps').innerHTML = steps.map((s,i)=>`<div class="step-item ${i===current?'active':''} ${i<current?'complete':''}"><span class="step-num">${i<current?'✓':i+1}</span><span>${s[0]}</span></div>`).join('');
-  nav.innerHTML = current === 0 ? `<span class="nav-hint">No credit card required · Takes about 5 minutes</span><div class="nav-buttons"><button class="button secondary" id="login">Log in</button><button class="button primary" id="next">Get started →</button></div>` : current === 11 ? `<span class="nav-hint">Your account is ready</span><div class="nav-buttons"><button class="button secondary" id="back">Previous</button><button class="button primary" id="dashboard">Go to dashboard →</button></div>` : `<span class="nav-hint">${12-current} step${12-current===1?'':'s'} remaining</span><div class="nav-buttons"><button class="button secondary" id="back">Previous</button><button class="button primary" id="next">${current===10?'Create profile':'Continue'} →</button></div>`;
-  bind();
-}
+document.querySelector("#close-dialog").addEventListener("click", () => dialog.close());
+dialog.addEventListener("click", event => { if (event.target === dialog) dialog.close(); });
 
-function bind() {
-  document.querySelectorAll('[data-section]').forEach(el => el.addEventListener('input', () => { state[el.dataset.section][el.dataset.key] = el.value; scheduleSave(); }));
-  document.querySelectorAll('[data-section]').forEach(el => el.addEventListener('change', () => { state[el.dataset.section][el.dataset.key] = el.value; scheduleSave(); }));
-  document.querySelectorAll('[data-choice]').forEach(el => el.addEventListener('click', () => { const [section,key] = el.dataset.choice.split('.'); state[section][key] = el.dataset.value; scheduleSave(); render(); }));
-  document.querySelectorAll('[data-tag]').forEach(el => el.addEventListener('click', () => { const tag=el.dataset.tag, list=state.founder.skills; state.founder.skills=list.includes(tag)?list.filter(x=>x!==tag):[...list,tag]; scheduleSave(); render(); }));
-  document.querySelectorAll('[data-document]').forEach(el=>el.addEventListener('change',()=>{const d=el.dataset.document;state.documents=el.checked?[...new Set([...state.documents,d])]:state.documents.filter(x=>x!==d);scheduleSave();}));
-  document.querySelectorAll('.file-input').forEach(el=>el.addEventListener('change',()=>{ if(el.files[0]) toast(`${el.files[0].name} selected — file upload is ready to connect.`); }));
-  document.querySelectorAll('[data-founder]').forEach(el => el.addEventListener('input',()=>{ state.team.founders[Number(el.dataset.founder)][el.dataset.founderKey]=el.value; scheduleSave(); }));
-  $('#add-founder')?.addEventListener('click',()=>{state.team.founders.push({});scheduleSave();render();});
-  document.querySelectorAll('[data-remove-founder]').forEach(el=>el.addEventListener('click',()=>{state.team.founders.splice(Number(el.dataset.removeFounder),1);scheduleSave();render();}));
-  document.querySelectorAll('[data-edit-step]').forEach(el=>el.addEventListener('click',()=>{current=Number(el.dataset.editStep);render();window.scrollTo(0,0);}));
-  $('#back')?.addEventListener('click',()=>{current--;render();window.scrollTo(0,0);});
-  $('#next')?.addEventListener('click',next);
-  $('#login')?.addEventListener('click',()=>toast('Login is available for returning founders.'));
-  $('#dashboard')?.addEventListener('click',()=>toast('Welcome to your StartupReady dashboard!'));
-}
-function validate() { if(current===1){const required=['fullName','workEmail','mobile','password','confirmPassword'];let valid=true;required.forEach(k=>{const field=$(`[data-field="account.${k}"]`), input=field.querySelector('input'); const message=!input.value?'This field is required.':k==='workEmail'&&!input.validity.valid?'Enter a valid email address.':k==='confirmPassword'&&input.value!==state.account.password?'Passwords do not match.':'';field.classList.toggle('error',!!message);field.querySelector('.field-error').textContent=message;valid&&=!message;});return valid;} if(current===3&&!state.startup.name){toast('Please add your startup name to continue.');return false;} if(current===4&&(!state.category.industry||!state.category.stage)){toast('Choose an industry and startup stage to continue.');return false;} return true; }
-function next() { if(!validate()) return; if(current===10) { save(true); } if(current<11){current++;render();window.scrollTo(0,0);} }
-function scheduleSave(){ $('#save-status').textContent='Saving…'; clearTimeout(saveTimer); saveTimer=setTimeout(save,600); }
-async function save(silent=false){try{localStorage.setItem('startupready-registration',JSON.stringify(state));const response=await fetch('/api/registration',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:state})});if(!response.ok)throw Error();$('#save-status').textContent='All changes saved';if(!silent)toast('Progress saved');}catch{localStorage.setItem('startupready-registration',JSON.stringify(state));$('#save-status').textContent='Saved on this device';if(!silent)toast('Saved on this device');}}
-function toast(message){const t=$('#toast');t.textContent=message;t.classList.add('show');clearTimeout(t._timeout);t._timeout=setTimeout(()=>t.classList.remove('show'),2600);}
-$('#theme-toggle').addEventListener('click',()=>{document.body.classList.toggle('dark');localStorage.setItem('startupready-theme',document.body.classList.contains('dark')?'dark':'light');});
-$('#save-exit').addEventListener('click',()=>{save();toast('Your registration is saved. Come back whenever you’re ready.');});
-async function boot(){try{const local=JSON.parse(localStorage.getItem('startupready-registration'));if(local)state={...state,...local};const response=await fetch('/api/registration');const remote=await response.json();if(remote.data&&Object.keys(remote.data).length)state={...state,...remote.data};}catch{}if(localStorage.getItem('startupready-theme')==='dark')document.body.classList.add('dark');render();}
-boot();
+form.addEventListener("submit", async event => {
+  event.preventDefault();
+  const submit = form.querySelector("button[type=submit]");
+  submit.disabled = true;
+  status.textContent = "Sending your request…";
+  try {
+    const response = await fetch("/api/orders", { method: "POST", body: new FormData(form) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Please try again.");
+    status.textContent = "Request received! We’ll reply to your email soon.";
+    form.reset();
+  } catch (error) { status.textContent = error.message; }
+  finally { submit.disabled = false; }
+});
+
+document.querySelector("#year").textContent = new Date().getFullYear();
+renderProducts();

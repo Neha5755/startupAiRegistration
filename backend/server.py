@@ -1,15 +1,14 @@
-"""StartupReady AI registration API and static-file server.
-
-This backend intentionally uses only the Python standard library so it can run
-in a Python full-stack internship environment without extra dependencies.
-"""
+"""Python server for the Channapatna Gifts catalogue and order requests."""
 
 from __future__ import annotations
 
 import json
 import mimetypes
 import os
+import re
 from datetime import datetime, timezone
+from email import policy
+from email.parser import BytesParser
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -18,31 +17,55 @@ from urllib.parse import urlparse
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_ROOT = PROJECT_ROOT / "frontend"
 DATA_DIRECTORY = Path(__file__).resolve().parent / "data"
-DATA_FILE = DATA_DIRECTORY / "registration.json"
+UPLOAD_DIRECTORY = DATA_DIRECTORY / "uploads"
+ORDERS_FILE = DATA_DIRECTORY / "orders.json"
 PORT = int(os.environ.get("PORT", "3000"))
+MAX_REQUEST_SIZE = 30 * 1024 * 1024
+MAX_FILE_SIZE = 8 * 1024 * 1024
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf", ".mp4", ".mov", ".webm"}
 
 
-def read_registration() -> dict:
-    """Return saved registration data, or an empty registration record."""
+def read_orders() -> list[dict]:
     try:
-        return json.loads(DATA_FILE.read_text(encoding="utf-8"))
+        return json.loads(ORDERS_FILE.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError):
-        return {"data": {}, "savedAt": None}
+        return []
 
 
-def save_registration(data: dict) -> dict:
-    """Persist a registration record and return the saved representation."""
+def save_order(order: dict) -> None:
     DATA_DIRECTORY.mkdir(exist_ok=True)
-    record = {
-        "data": data,
-        "savedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-    }
-    DATA_FILE.write_text(json.dumps(record, indent=2), encoding="utf-8")
-    return record
+    orders = read_orders()
+    orders.append(order)
+    ORDERS_FILE.write_text(json.dumps(orders, indent=2), encoding="utf-8")
 
 
-class StartupReadyHandler(SimpleHTTPRequestHandler):
-    """Serve the frontend plus small JSON endpoints used for auto-save."""
+def safe_filename(name: str) -> str:
+    base = Path(name).name
+    return re.sub(r"[^A-Za-z0-9._-]", "_", base)
+
+
+def parse_multipart(content_type: str, body: bytes) -> tuple[dict[str, str], list[tuple[str, bytes]]]:
+    """Parse browser FormData without third-party dependencies."""
+    message = BytesParser(policy=policy.default).parsebytes(
+        f"Content-Type: {content_type}\r\nMIME-Version: 1.0\r\n\r\n".encode() + body
+    )
+    fields: dict[str, str] = {}
+    files: list[tuple[str, bytes]] = []
+    for part in message.iter_parts():
+        if part.get_content_disposition() != "form-data":
+            continue
+        field_name = part.get_param("name", header="content-disposition")
+        filename = part.get_filename()
+        payload = part.get_payload(decode=True) or b""
+        if filename:
+            files.append((safe_filename(filename), payload))
+        elif field_name:
+            fields[field_name] = payload.decode("utf-8", errors="replace").strip()
+    return fields, files
+
+
+class GiftHandler(SimpleHTTPRequestHandler):
+    """Serve the catalogue and accept custom order requests."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(FRONTEND_ROOT), **kwargs)
@@ -60,43 +83,56 @@ class StartupReadyHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self) -> None:
-        path = urlparse(self.path).path
-        if path == "/api/health":
+        if urlparse(self.path).path == "/api/health":
             self.send_json(HTTPStatus.OK, {"ok": True, "language": "Python"})
-            return
-        if path == "/api/registration":
-            self.send_json(HTTPStatus.OK, read_registration())
             return
         super().do_GET()
 
     def do_POST(self) -> None:
-        path = urlparse(self.path).path
-        if path != "/api/registration":
+        if urlparse(self.path).path != "/api/orders":
             self.send_json(HTTPStatus.NOT_FOUND, {"error": "Not found"})
             return
-
+        content_type = self.headers.get("Content-Type", "")
+        content_length = int(self.headers.get("Content-Length", "0"))
+        if not content_type.startswith("multipart/form-data"):
+            self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Use the custom order form to send this request."})
+            return
+        if not content_length or content_length > MAX_REQUEST_SIZE:
+            self.send_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "Your total upload must be below 30 MB."})
+            return
         try:
-            content_length = int(self.headers.get("Content-Length", "0"))
-            if content_length > 1_000_000:
-                self.send_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "Request is too large."})
+            fields, uploads = parse_multipart(content_type, self.rfile.read(content_length))
+            if not all(fields.get(key) for key in ("name", "email", "product")):
+                self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Name, email, and product are required."})
                 return
-            payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
-            data = payload.get("data")
-            if not isinstance(data, dict):
-                self.send_json(HTTPStatus.BAD_REQUEST, {"error": "A data object is required."})
+            if "@" not in fields["email"]:
+                self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Please enter a valid email address."})
                 return
-            self.send_json(HTTPStatus.OK, save_registration(data))
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid JSON."})
+            UPLOAD_DIRECTORY.mkdir(parents=True, exist_ok=True)
+            uploaded_names = []
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+            for filename, content in uploads:
+                extension = Path(filename).suffix.lower()
+                if extension not in ALLOWED_EXTENSIONS or len(content) > MAX_FILE_SIZE:
+                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Files must be images, videos, or PDFs under 8 MB each."})
+                    return
+                stored_name = f"{stamp}_{filename}"
+                (UPLOAD_DIRECTORY / stored_name).write_bytes(content)
+                uploaded_names.append(stored_name)
+            order = {"id": stamp, "created_at": datetime.now(timezone.utc).isoformat(), "product": fields["product"], "name": fields["name"], "email": fields["email"], "occasion": fields.get("occasion", ""), "needed_by": fields.get("needed_by", ""), "message": fields.get("message", ""), "files": uploaded_names}
+            save_order(order)
+            self.send_json(HTTPStatus.CREATED, {"ok": True, "message": "Order request received."})
+        except (UnicodeDecodeError, ValueError):
+            self.send_json(HTTPStatus.BAD_REQUEST, {"error": "We could not read that request. Please try again."})
 
     def log_message(self, format_string: str, *args) -> None:
-        print(f"[Python API] {self.address_string()} - {format_string % args}")
+        print(f"[Channapatna Gifts] {self.address_string()} - {format_string % args}")
 
 
 if __name__ == "__main__":
     mimetypes.add_type("application/javascript", ".js")
-    server = ThreadingHTTPServer(("", PORT), StartupReadyHandler)
-    print(f"StartupReady AI Python server is running at http://localhost:{PORT}")
+    server = ThreadingHTTPServer(("", PORT), GiftHandler)
+    print(f"Channapatna Gifts is running at http://localhost:{PORT}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

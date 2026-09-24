@@ -1,38 +1,59 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#09231e" />
-    <title>StartupReady AI | Founder registration</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <main class="app-shell">
-      <aside class="side-panel" aria-label="Registration overview">
-        <a class="brand" href="#"><span class="brand-mark">S</span><span>startup<span>ready</span></span></a>
-        <div class="side-copy">
-          <p class="eyebrow">Founder onboarding</p>
-          <h1>Turn your idea into <em>momentum.</em></h1>
-          <p>Tell us the essentials. We’ll help shape the rest as your startup grows.</p>
-        </div>
-        <div class="steps" id="steps" aria-label="Registration steps"></div>
-        <div class="side-footer"><span class="secure-dot"></span> Your information is kept private</div>
-      </aside>
-
-      <section class="workspace">
-        <header class="topbar">
-          <div class="progress-wrap"><div class="progress-label"><span id="step-meta">Getting started</span><span id="percent">0%</span></div><div class="progress-track"><div id="progress-bar"></div></div></div>
-          <div class="header-actions"><span id="save-status" class="save-status">Saved locally</span><button class="icon-button" id="theme-toggle" aria-label="Toggle color theme">◐</button><button class="text-button" id="save-exit">Save & exit</button></div>
-        </header>
-        <div class="form-stage" id="form-stage"></div>
-        <footer class="form-nav" id="form-nav"></footer>
-      </section>
-    </main>
-    <div id="toast" class="toast" role="status"></div>
-    <script src="app.js"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#8f1d42" />
+  <title>Channapatna Gifts | Little gifts, big feelings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top">Channapatna <span>Gifts</span></a>
+    <a class="header-link" href="#collection">Shop gifts</a>
+  </header>
+  <main id="top">
+    <section class="hero">
+      <p class="eyebrow">Handmade moments, made for giving</p>
+      <h1>Little gifts.<br /><em>Big feelings.</em></h1>
+      <p>Sweet, personal surprises for birthdays, anniversaries, and all the “just because” days in between.</p>
+      <a class="hero-button" href="#collection">Find a gift ↓</a>
+    </section>
+    <section class="intro"><strong>Every gift can become uniquely yours.</strong><span>Pick a product, add your message, date, photo, video, or PDF, and we’ll confirm your custom order by email.</span></section>
+    <section class="catalog" id="collection">
+      <div class="section-heading"><div><p class="eyebrow">The gift shelf</p><h2>Made to make them smile.</h2></div><p>Tap any gift to personalise it.</p></div>
+      <div class="product-grid" id="product-grid"></div>
+    </section>
+    <section class="how-it-works">
+      <p class="eyebrow">How it works</p>
+      <div class="how-grid">
+        <article><span>01</span><h3>Pick a favourite</h3><p>Choose a little surprise from the collection.</p></article>
+        <article><span>02</span><h3>Make it yours</h3><p>Add a note, special date, or a file for a custom touch.</p></article>
+        <article><span>03</span><h3>We confirm by email</h3><p>Share your email and we’ll reply with the next steps.</p></article>
+      </div>
+    </section>
+  </main>
+  <footer>© <span id="year"></span> Channapatna Gifts · Made with love</footer>
+  <dialog class="order-dialog" id="order-dialog">
+    <form id="order-form" enctype="multipart/form-data">
+      <button class="close-button" type="button" id="close-dialog" aria-label="Close">×</button>
+      <p class="eyebrow">Custom order request</p><h2>Make it personal</h2>
+      <div class="chosen-product" id="chosen-product"></div><input type="hidden" name="product" id="product-input" />
+      <div class="form-grid">
+        <label>Your name<input name="name" autocomplete="name" required placeholder="Your name" /></label>
+        <label>Your email<input name="email" type="email" autocomplete="email" required placeholder="you@example.com" /></label>
+        <label>Occasion<select name="occasion"><option>Just because</option><option>Birthday</option><option>Anniversary</option><option>Valentine's Day</option><option>Other</option></select></label>
+        <label>Needed by<input name="needed_by" type="date" /></label>
+        <label class="full">Your message<textarea name="message" rows="4" placeholder="Names, wording, colours, or any special request"></textarea></label>
+        <label class="full upload-field">Add custom files <span>Optional · images, videos, or PDFs · maximum 8 MB each</span><input name="files" type="file" multiple accept="image/*,video/*,.pdf" /></label>
+      </div>
+      <p class="form-note">Your email is used only to reply to this order request.</p>
+      <button class="submit-button" type="submit">Send custom request</button><p class="form-status" id="form-status" role="status"></p>
+    </form>
+  </dialog>
+  <script src="app.js"></script>
+</body>
 </html>
